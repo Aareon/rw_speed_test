@@ -1,3 +1,16 @@
+""" rw_speed_test/main.py
+Test the read & write speed of a connected storage device.
+
+Prints to console the write and read speeds in megabytes per second.
+Allows for testing of USB flash drives, external hard drives, etc.
+Optional iterations parameter allows for multiple tests to be run and averaged.
+
+Compatible with Windows, Python 3.6+.
+
+Author: Aareon Sullivan
+Date: 2023-05-12
+License: MIT
+"""
 import os
 import sys
 import time
@@ -5,7 +18,7 @@ from pathlib import Path
 
 import psutil
 
-ROOT_FP = Path(__file__).parent  # Root file path of this script
+ROOT_FP = Path(__file__).parent.resolve()  # Root file path of this script
 
 
 def sizeof_fmt(num: float, suffix: str = "B") -> str:
@@ -66,7 +79,9 @@ def test_storage_speed(
 
     # Check if chosen drive is mounted
     drive: str = drive.lower()
-    disks: list = [d.mountpoint.replace(":\\", "").lower() for d in psutil.disk_partitions()]  # create a list of mounted drives
+    disks: list = [
+        d.mountpoint.replace(":\\", "").lower() for d in psutil.disk_partitions()
+    ]  # list of mounted drives
 
     print(f"Mounted drives: {disks}")
 
@@ -76,13 +91,15 @@ def test_storage_speed(
 
     # Check if this script is on `drive`
     print(f"Script located on drive '{ROOT_FP.drive.strip(':')}'")
-    this_drive: Path = ROOT_FP.drive.strip(":")  # get the drive letter of this script
+    this_drive: str = ROOT_FP.drive.strip(
+        ":"
+    ).lower()  # get the drive letter of this script
 
     # Get a file path for desired disk to test
     if this_drive == drive:
-        fp: Path = ROOT_FP
+        fp: Path = ROOT_FP.resolve()
     else:
-        fp: Path = Path(f"{drive}:\\")
+        fp: Path = Path(f"{drive}:\\").resolve()
 
     print(
         f"Test file path {str(fp)[:-1].upper() if fp != ROOT_FP else fp}, is_dir: {fp.is_dir()}"
@@ -98,7 +115,8 @@ def test_storage_speed(
     iterations: int = iterations if iterations > 0 else 1
 
     print(
-        f"Testing r/w speed for drive '{drive.upper()}:' with file size {sizeof_fmt(file_size_bytes)} for {iterations} iterations. Please wait..."
+        f"Testing r/w speed for drive '{drive.upper()}:' with file size {sizeof_fmt(file_size_bytes)} for {iterations}",
+        "iterations. Please wait...",
     )
 
     # Define a filename for test file
@@ -107,15 +125,15 @@ def test_storage_speed(
     # Generate a random data string to write to the file
     data: bytes = os.urandom(file_size_bytes)
 
-    read_speed: int = 0
-    write_speed: int = 0
+    read_speed: float = 0
+    write_speed: float = 0
 
     # Time all iterations
     overall_start: float = time.perf_counter()
 
     # Combine all speeds to get an average for all iterations
-    average_write_speed: int = 0
-    average_read_speed: int = 0
+    average_write_speed: float = 0
+    average_read_speed: float = 0
 
     for i in range(iterations):
         iteration_start: float = time.perf_counter()
@@ -128,19 +146,21 @@ def test_storage_speed(
             end_time: float = time.perf_counter()
 
         # Calculate the write speed
-        write_speed = file_size_bytes / (end_time - start_time) / (1024 * 1024)
+        write_speed: float = file_size_bytes / (end_time - start_time) / (1024 * 1024)
         average_write_speed += write_speed
 
         # Read the file to test the read speed
         with open(fp / test_fn, "rb") as f:
-            start_time = time.perf_counter()
+            start_time: float = time.perf_counter()
             f.read()
-            end_time = time.perf_counter()
+            end_time: float = time.perf_counter()
 
-        iteration_end = time.perf_counter()
+        iteration_end: float = time.perf_counter()
 
         # Calculate the read speed
-        read_speed = file_size_bytes / (end_time - start_time) / (1024 * 1024)  # MB/s
+        read_speed: float = (
+            file_size_bytes / (end_time - start_time) / (1024 * 1024)
+        )  # MB/s
         average_read_speed += read_speed
 
         # Delete the temporary file
@@ -151,9 +171,7 @@ def test_storage_speed(
         print(f"Iteration: {i+1}")
         print(f"Write Speed: {write_speed:.2f} MB/s")
         print(f"Read Speed: {read_speed:.2f} MB/s")
-        print(
-            f"Iteration time elapsed: {(iteration_end - iteration_start):.2f} seconds"
-        )
+        print(f"Iteration time elapsed: {(iteration_end - iteration_start):.2f} seconds")
 
     # Get end time for all iterations
     overall_end: float = time.perf_counter()
@@ -169,4 +187,4 @@ def test_storage_speed(
 
 
 # Example usage
-test_storage_speed(file_size=1024, iterations=1, drive="c")
+test_storage_speed(file_size=128, iterations=1, drive="c")
